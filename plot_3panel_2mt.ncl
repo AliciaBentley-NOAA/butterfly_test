@@ -1,0 +1,379 @@
+; ===========================================
+; Plots 2-m temperature
+; Created by: Alicia M. Bentley
+; ===========================================
+load "$NCARG_ROOT/lib/ncarg/nclscripts/csm/contributed.ncl"
+load "$NCARG_ROOT/lib/ncarg/nclscripts/contrib/cd_string.ncl"
+; ===========================================
+
+begin
+
+print(" ")
+print("**************")
+print(" START SCRIPT ")
+print("**************")
+
+;*******************************************************
+; Define what variables, domains, and directories
+;*******************************************************
+
+varname = "gfs_2mt"
+project = "butterfly"  ; event name
+
+folder = (/"global","northamer"/)       ; domain(s) to plot
+enddomain = dimsizes(folder)
+do x = 0,enddomain-1       ; loop through all the domains you selected (only 1 domain if 1 domain selected)
+domain = folder(x)
+
+testlist = (/"3vs4"/)       ; test(s) to plot
+endtest = dimsizes(testlist)
+do t = 0,endtest-1       ; loop through all the tests you selected (only 1 test if 1 test selected)
+test = testlist(t)
+
+img_loc = "/gpfs/dell2/emc/verification/save/Alicia.Bentley/"+project+"/images"   ; Define directory where images will ultimately be located (and create it)
+system("mkdir "+img_loc)
+system("mkdir "+img_loc+"/"+test)
+dir_out = img_loc+"/"+test+"/"
+
+print(" ")
+print("Plotting '"+varname+"' for '"+test+"' over '"+domain+"'")  ; Print what you are plotting
+print("Images finally located: "+dir_out)
+
+
+;*******************************************************
+; Define what dates to plot
+;*******************************************************
+
+byyyy = 2021            ; Define first date to plot (yyyy mm dd hh)
+bmm = 12
+bdd = 27
+bhh = 00
+
+eyyyy = 2022    ; Define last date to plot (yyyy mm dd hh)
+emm = 1
+edd = 12
+ehh = 00
+
+timeUnits = "hours since 1800-01-01 00:00:00"
+bdate = cd_inv_calendar(byyyy,bmm,bdd,bhh,00,00,timeUnits,0)
+edate = cd_inv_calendar(eyyyy,emm,edd,ehh,00,00,timeUnits,0)
+
+print(" ")
+print("bdate: "+cd_calendar(bdate,-3))
+print("edate: "+cd_calendar(edate,-3))
+
+counter = 0
+
+do date = bdate,edate,24       ; Create images from start date to end date (with 24 h increments)
+
+; ******************************************************
+; Load files
+; ******************************************************
+    print(" ")
+    print("Date:  "+cd_calendar(date,-3)+" | Creating image")     ; Print date currently being plotted
+        modelstrings=tostring(cd_calendar(date,-3))        
+        yyyy = str_get_cols(modelstrings,0,3)
+        mm = str_get_cols(modelstrings,4,5)
+        dd = str_get_cols(modelstrings,6,7)
+        hh = str_get_cols(modelstrings,8,9)
+
+        fhr = date-bdate
+        imgnumber = counter+(fhr/24.)
+
+                 if (fhr.lt.10) then
+                      filefhr := "00"+fhr
+                 else if ((fhr.lt.100).and.(fhr.gt.10)) then
+                      filefhr := "0"+fhr
+                 else if (fhr.gt.100) then
+                      filefhr := fhr
+                 end if
+                 end if
+                 end if
+
+print("filefhr: "+filefhr)
+print("yyyymmddhh: "+yyyy+mm+dd+hh)
+name=varname+"_"+test+"_"+domain+"_"+imgnumber
+print("name: "+name)
+
+if test .eq. "1vs2" then
+infile1="/gpfs/dell3/ptmp/Kate.Friedman/comrot/v162_bf1/gfs.20211227/00/atmos/gfs.t"+hh+"z.pgrb2.0p25.f"+filefhr
+print("infile1: "+infile1)
+infile2="/gpfs/dell3/ptmp/Kate.Friedman/comrot/v162_bf2/gfs.20211227/00/atmos/gfs.t"+hh+"z.pgrb2.0p25.f"+filefhr
+print("infile2: "+infile2)
+testnum1 = 1
+testnum2 = 2
+end if
+
+if test .eq. "1vs3" then
+infile1="/gpfs/dell3/ptmp/Kate.Friedman/comrot/v162_bf1/gfs.20211227/00/atmos/gfs.t"+hh+"z.pgrb2.0p25.f"+filefhr
+print("infile1: "+infile1)
+infile2="/gpfs/dell3/ptmp/Kate.Friedman/comrot/v162_bf3/gfs.20211227/00/atmos/gfs.t"+hh+"z.pgrb2.0p25.f"+filefhr
+print("infile2: "+infile2)
+testnum1 = 1
+testnum2 = 3
+end if
+
+if test .eq. "1vs4" then
+infile1="/gpfs/dell3/ptmp/Kate.Friedman/comrot/v162_bf1/gfs.20211227/00/atmos/gfs.t"+hh+"z.pgrb2.0p25.f"+filefhr
+print("infile1: "+infile1)
+infile2="/gpfs/dell3/ptmp/Kate.Friedman/comrot/v162_bf4/gfs.20211227/00/atmos/gfs.t"+hh+"z.pgrb2.0p25.f"+filefhr
+print("infile2: "+infile2)
+testnum1 = 1
+testnum2 = 4
+end if
+
+if test .eq. "3vs4" then
+infile1="/gpfs/dell3/ptmp/Kate.Friedman/comrot/v162_bf3/gfs.20211227/00/atmos/gfs.t"+hh+"z.pgrb2.0p25.f"+filefhr
+print("infile1: "+infile1)
+infile2="/gpfs/dell3/ptmp/Kate.Friedman/comrot/v162_bf4/gfs.20211227/00/atmos/gfs.t"+hh+"z.pgrb2.0p25.f"+filefhr
+print("infile2: "+infile2)
+testnum1 = 3
+testnum2 = 4
+end if
+
+   prod_gfs = addfile(infile1+".grb2","r")
+   test_gfs = addfile(infile2+".grb2","r")
+
+   geo1=prod_gfs->TMP_P0_L103_GLL0({2},:,:)
+   geo1=(geo1-273.15)*1.8+32.0 ;convert from K to F
+   geo2=test_gfs->TMP_P0_L103_GLL0({2},:,:)
+   geo2=(geo2-273.15)*1.8+32.0 ;convert from K to F
+
+  dif = geo2
+  dif = geo2-geo1
+  printMinMax(dif,True)
+
+if domain .eq. "global" then
+do d = 0,10,1
+  geo1 = smth9(geo1, 0.50,  0.25, True)
+  geo2 = smth9(geo2, 0.50,  0.25, True)
+  dif = smth9(dif, 0.50,  0.25, True)
+end do
+end if
+
+;==============================================
+; Create Shaded Map
+;==============================================
+
+wks_type = "png"
+
+wks_type@wkWidth = 1600
+wks_type@wkHeight = 1600
+
+wks = gsn_open_wks(wks_type,dir_out+name)
+gsn_define_colormap(wks,"temp")
+
+plot=new(3,"graphic")
+;**********************************************
+
+res = True
+
+res@gsnFrame = False                                             ;DO NOT PLOT FIRST MAP
+res@gsnDraw = False
+
+res@mpDataBaseVersion = "MediumRes"                              ; Country Outlines
+res@mpDataSetName = "Earth..4"
+res@mpOutlineBoundarySets = "National"
+
+res@cnFillOn = True                                              ; Turn on color fill
+res@cnFillMode = "AreaFill"
+res@cnRasterSmoothingOn = True
+res@cnLevelSelectionMode = "ExplicitLevels"
+res@cnLinesOn = False                               ; Relative Vorticity Shading Information
+res@cnLevels:=fspan(-40,120,41)
+
+;**********************************************
+
+res@lbAutoManage = False                                                        ; Color bar information
+res@pmLabelBarOrthogonalPosF = -.06
+res@pmLabelBarHeightF = 0.08
+res@pmLabelBarWidthF = 0.60
+res@lbLabelAutoStride = True
+res@lbLabelFontHeightF = 0.0124
+res@lbBoxLinesOn  = True
+res@lbTopMarginF = .3
+
+;**********************************************
+
+res@tiMainString = " "                                                          ; Image labels
+res@tiMainJust = "CenterCenter"
+res@tiMainPosition = "Center"
+res@tiMainOffsetYF = .02
+res@tiXAxisFontHeightF = .015
+
+res@gsnLeftStringOrthogonalPosF = .012
+res@gsnLeftStringFontHeightF = .008
+res@gsnRightString = " "
+res@gsnRightStringOrthogonalPosF = .0075
+res@gsnRightStringFontHeightF = .012
+
+; *********************************************
+
+res@mpGeophysicalLineThicknessF = 5.0                           ; Map details
+res@mpNationalLineThicknessF = 5.0
+res@mpUSStateLineThicknessF = 2.0
+res@mpOutlineSpecifiers = (/"United States"/)+" : States"
+
+res@mpGeophysicalLineColor = "grey29"
+res@mpNationalLineColor = "grey29"
+res@mpUSStateLineColor = "grey29"
+
+; *********************************************
+
+res@mpGridAndLimbOn = True                                                      ; Grid lines and tick mark information
+res@mpGridLineDashPattern = 5
+res@mpGridLatSpacingF = 20.
+res@mpGridLonSpacingF = 20.
+res@mpGridLineThicknessF = 3
+res@mpGridLineColor = "grey12"
+
+; *************************************************************
+
+cnres = True                                            ; Geopotential height information
+
+cnres@gsnFrame = False
+cnres@gsnDraw = False
+
+cnres@gsnLeftString = " "
+cnres@gsnRightString = " "
+
+cnres@cnInfoLabelOn = False
+cnres@cnFillOn = False
+cnres@cnLinesOn = False
+cnres@cnLabelMasking = True
+cnres@cnLineThicknessF = 4
+cnres@cnLevelSelectionMode = "ManualLevels"
+cnres@cnLevelSpacingF = 6
+cnres@cnMinLevelValF = 450
+cnres@cnMaxLevelValF = 606
+cnres@cnLineLabelAngleF = 0.0
+cnres@cnLineLabelInterval = 2
+cnres@cnLineLabelDensityF = .90
+;cnres@cnSmoothingOn = True
+;cnres@cnSmoothingDistanceF = 0.009
+cnres@cnLineLabelBackgroundColor = -1
+cnres@cnLineLabelFontHeightF = 0.008
+cnres@gsnAddCyclic = True
+
+; ************************************************************
+
+  zres=True
+  zres@cnLinesOn=True
+  zres@cnFillOn=False
+  zres@cnInfoLabelOn=False
+  zres@cnLevelSelectionMode="ExplicitLevels"
+  zres@gsnMaximize=True
+  zres@cnLineLabelInterval=1
+  zres@gsnLeftString=""
+  zres@gsnRightString=""
+  zres@cnLevels=(/32/)
+  zres@gsnDraw=False
+  zres@cnLabelMasking=True
+  zres@cnLineLabelBackgroundColor=-1
+  zres@cnLineLabelAngleF=0.0
+  zres@cnLineThicknessF=3.0
+  zres@cnLineLabelFontHeightF=.009
+  zres@cnLineLabelsOn=False
+  zres@cnLineColor="white"
+  zres@cnLowLabelsOn=False
+  zres@cnLowLabelBackgroundColor=-1
+  zres@cnLowLabelFontColor="black"
+  zres@cnHighLabelFontHeightF=.019
+  zres@cnHighLabelFont = "helvetica-bold"
+  zres@cnLowLabelFont = "helvetica-bold"
+  zres@gsnFrame=False
+
+; *************************************************************
+
+if domain .eq. "northamer"                                      ; Define domains
+res@mpProjection = "LambertConformal"
+res@mpLambertParallel2F = 31
+res@mpLambertParallel1F = 11
+res@mpLambertMeridianF = -100
+res@mpLimitMode = "LatLon"
+res@mpMinLatF = 8
+res@mpMaxLatF = 69
+res@mpMinLonF = -151
+res@mpMaxLonF = -49
+res@tmXBValues := ispan(-180,179,40)
+res@tmYLValues := ispan(0,80,20)
+res@tmYRValues := ispan(0,80,20)
+end if
+
+if domain .eq. "global" then
+res@mpGeophysicalLineThicknessF = 4.0
+res@mpNationalLineThicknessF = 4.0
+res@mpUSStateLineThicknessF = 2.0
+res@mpGridLineDashPattern = 5
+res@mpGridLatSpacingF = 30.
+res@mpGridLonSpacingF = 30.
+res@mpGridLineThicknessF = 1
+res@pmLabelBarOrthogonalPosF = .03
+cnres@cnLineThicknessF = 1
+;res@cnLevels:=fspan(-40,120,11)
+end if
+
+; *************************************************************
+res@mpFillOn = True
+res@mpOutlineOn = True
+res@mpFillDrawOrder = "PreDraw"
+res@cnFillDrawOrder = "PreDraw"
+cnres@cnLineDrawOrder ="Draw"
+res@mpOutlineDrawOrder = "Draw"
+res@mpGridAndLimbDrawOrder = "PostDraw"
+
+res@gsnLeftString = "GFS | Test: "+testnum1+" | Init.: "+cd_string(bdate,"")+" | Fhr: "+fhr+" | Valid: "+cd_string(date,"")+" | 2-m temperature (F)"
+plot(0) = gsn_csm_contour_map(wks, geo1, res)          ; Plot filled contour map
+contours = gsn_csm_contour(wks, geo1, zres)
+overlay(plot(0),contours)
+
+res@gsnLeftString = "GFS | Test: "+testnum2+" | Init.: "+cd_string(bdate,"")+" | Fhr: "+fhr+" | Valid: "+cd_string(date,"")+" | 2-m temperature (F)"
+plot(1) = gsn_csm_contour_map(wks, geo2, res)          ; Plot filled contour map
+contours1 = gsn_csm_contour(wks, geo2, zres)
+overlay(plot(1),contours1)
+
+;********************************************
+
+  resdif=True
+  resdif=res
+  resdif@cnFillPalette=("BlueWhiteOrangeRed")
+;  delete(resdif@cnFillColors)
+  delete(resdif@cnLevels)
+  resdif@cnLevels:=fspan(-40,40,41)
+if domain .eq. "global" then
+  resdif@cnLevels:=fspan(-40,40,41)
+end if
+  resdif@gsnLeftString = "GFS | Test: "+testnum2+"-"+testnum1+" | Init.: "+cd_string(bdate,"")+" | Fhr: "+fhr+" | Valid: "+cd_string(date,"")+" | 2-m temperature (F)"
+  plot(2) = gsn_csm_contour_map(wks,dif,resdif)       ; create a default plot
+
+;********************************************
+
+print("Creating panel plot!")
+  resP=True
+  resP@gsnMaximize=True
+  resP@txFontHeightF=.012
+  resP@gsnPanelLabelBar=False
+  resP@gsnFrame=False
+  gsn_panel(wks,plot,(/2,2/),resP)
+
+print("Starting to frame wks!")
+;draw(plot)      ; Draw final image
+frame(wks)
+
+;********************************************
+
+system("convert "+dir_out+name+".png -trim +repage "+dir_out+name+".gif")
+system("'rm' "+dir_out+name+".png")
+
+end do     ; end date loop
+print(" ")
+end do     ; end domain loop
+end do     ; end test loop
+
+print(" ")
+print("**************")
+print(" END SCRIPT ")
+print("**************")
+print(" ")
+
+end
